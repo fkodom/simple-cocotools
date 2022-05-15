@@ -1,12 +1,12 @@
-# {{REPO_NAME}}
+# simple-cocotools
 
 ## Install
 
 ```bash
-pip install "{{REPO_NAME}} @ git+ssh://git@github.com/{{REPO_OWNER}}/{{REPO_NAME}}.git"
+pip install "simple-cocotools @ git+ssh://git@github.com/fkodom/simple-cocotools.git"
 
 # Install all dev dependencies (tests etc.)
-pip install "{{REPO_NAME}}[all] @ git+ssh://git@github.com/{{REPO_OWNER}}/{{REPO_NAME}}.git"
+pip install "simple-cocotools[all] @ git+ssh://git@github.com/fkodom/simple-cocotools.git"
 
 # Setup pre-commit hooks
 pre-commit install
