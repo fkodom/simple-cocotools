@@ -15,6 +15,10 @@ class Detection:
     score: float = 0.0
     area: float = 0.0
 
+    def __post_init__(self):
+        if self.mask is not None:
+            self.mask = self.mask > 0.5
+
 
 def box_iou(d1: Detection, d2: Detection) -> float:
     l1, t1, r1, b1 = d1.box
@@ -30,10 +34,14 @@ def box_iou(d1: Detection, d2: Detection) -> float:
 def mask_iou(d1: Detection, d2: Detection, threshold: float = 0.5) -> float:
     assert d1.mask is not None
     assert d2.mask is not None
-    m1 = d1.mask > threshold
-    m2 = d2.mask > threshold
-    intersection = np.sum(m1 & m2)
-    union = np.sum(m1 | m2)
-    if union < 1e-8:
+    if d1.mask.dtype != np.bool8:
+        d1.mask = d1.mask > threshold
+    if d2.mask.dtype != np.bool8:
+        d2.mask = d2.mask > threshold
+
+    intersection = np.count_nonzero(d1.mask & d2.mask)
+    if not intersection:
         return 0.0
+
+    union = np.count_nonzero(d1.mask | d2.mask)
     return intersection / union
