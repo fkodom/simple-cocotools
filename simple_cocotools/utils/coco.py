@@ -4,7 +4,7 @@ import os
 from abc import abstractproperty
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from zipfile import ZipFile
 
 import numpy as np
@@ -48,22 +48,32 @@ class CocoDataResource:
 class CocoImages(CocoDataResource):
     @property
     def url(self) -> str:
-        return f"http://images.cocodataset.org/zips/{self.split}2014.zip"
+        split = "val" if self.split == "minival" else self.split
+        return f"http://images.cocodataset.org/zips/{split}2014.zip"
 
     @property
     def prefix(self) -> str:
-        return f"{self.split}2014/"
+        split = "val" if self.split == "minival" else self.split
+        return f"{split}2014/"
 
 
 @dataclass
 class CocoInstances(CocoDataResource):
     @property
     def url(self) -> str:
-        return "http://images.cocodataset.org/annotations/annotations_trainval2014.zip"
+        if self.split == "minival":
+            return "https://dl.dropboxusercontent.com/s/o43o90bna78omob/instances_minival2014.json.zip?dl=0"
+        else:
+            return (
+                "http://images.cocodataset.org/annotations/annotations_trainval2014.zip"
+            )
 
     @property
     def prefix(self) -> str:
-        return f"annotations/instances_{self.split}2014.json"
+        if self.split == "minival":
+            return "instances_minival2014.json"
+        else:
+            return f"annotations/instances_{self.split}2014.json"
 
 
 def bbox_voc_to_coco_format(bbox: np.ndarray) -> np.ndarray:
@@ -156,12 +166,24 @@ class CocoDetection2014(CocoDetection):
             annFile=anns_file,
             transforms=transforms,
         )
+        self.skip_annotation_ids = [
+            900100193200,
+            900100259600,
+            908400416500,
+            900100463500,
+        ]
         self.target_transform = AnnotationsToDetectionFormat(coco_api=self.coco)
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         id = self.ids[index]
         image = self._load_image(id)
-        target = self.target_transform(self._load_target(id))
+        target = self.target_transform(
+            [
+                annotation
+                for annotation in self._load_target(id)
+                if int(annotation["id"]) not in self.skip_annotation_ids
+            ]
+        )
 
         if self.transforms is not None:
             image, target = self.transforms(image, target)
