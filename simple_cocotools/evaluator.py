@@ -168,11 +168,7 @@ class CocoEvaluator:
         if not self.metrics:
             self.accumulate()
         if verbose:
-            summary = {
-                dtype: {k: v for k, v in metrics.items() if not isinstance(v, dict)}
-                for dtype, metrics in self.metrics.items()
-            }
-            print(json.dumps(summary, indent=4))
+            print(json.dumps(self.metrics, indent=4))
         return self.metrics
 
     def reset(self):
