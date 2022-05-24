@@ -92,7 +92,7 @@ class CocoEvaluator:
         self.mask_counts: Dict[Union[str, int], List[Counts]] = {}
         self.metrics: Dict[str, Dict] = {}
 
-    def _update_sample(self, pred: List[Detection], true: List[Detection]):
+    def _update_one_sample(self, pred: List[Detection], true: List[Detection]):
         pred_labels = set(p.label for p in pred)
         true_labels = set(t.label for t in true)
         labels = pred_labels.union(true_labels)
@@ -113,8 +113,10 @@ class CocoEvaluator:
                 for counts, updates in zip(self.box_counts[key], new_box_counts)
             ]
 
-            evaluate_masks = all(t.mask is not None for t in _true) and all(
-                p.mask is not None for p in _pred
+            evaluate_masks = (
+                (_true or _pred)
+                and all(t.mask is not None for t in _true)
+                and all(p.mask is not None for p in _pred)
             )
             if evaluate_masks:
                 if key not in self.mask_counts:
@@ -133,7 +135,7 @@ class CocoEvaluator:
         true: List[Dict[str, np.ndarray]],
     ):
         for _pred, _true in zip(pred, true):
-            self._update_sample(parse_predictions(_pred), parse_predictions(_true))
+            self._update_one_sample(parse_predictions(_pred), parse_predictions(_true))
 
     @staticmethod
     def _accumulate_metrics(

@@ -1,0 +1,62 @@
+from typing import Any, Dict, List, Sequence
+
+import numpy as np
+import torch
+from PIL import Image
+from torch import Tensor, nn
+from torch.utils.data import DataLoader
+from torchvision.models.detection import fasterrcnn_resnet50_fpn
+from torchvision.transforms.functional import to_tensor
+from tqdm import tqdm
+
+from simple_cocotools.evaluator import CocoEvaluator
+from simple_cocotools.utils.coco import CocoDetection2014
+from simple_cocotools.utils.data import default_collate_fn
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def transform_to_tensors(image: Image.Image, targets: Dict[str, np.ndarray]):
+    out_image = to_tensor(image)
+    out_targets = {k: torch.as_tensor(v) for k, v in targets.items()}
+    return out_image, out_targets
+
+
+def predict(model: nn.Module, images: Sequence[Tensor]) -> List[Dict[str, np.ndarray]]:
+    with torch.no_grad(), torch.autocast("cuda"):
+        predictions = model([image.to(DEVICE) for image in images])
+
+    out = []
+    for pred in predictions:
+        thresholded = pred["scores"] > 0.5
+        selected = {
+            "scores": pred["scores"][thresholded].cpu().numpy(),
+            "labels": pred["labels"][thresholded].cpu().numpy(),
+            "boxes": pred["boxes"][thresholded].cpu().numpy(),
+        }
+        out.append(selected)
+
+    return out
+
+
+def main() -> Dict[str, Any]:
+    detection_model = fasterrcnn_resnet50_fpn(pretrained=True).eval().to(DEVICE)
+
+    dataset = CocoDetection2014(split="minival", transforms=transform_to_tensors)
+    dataloader = DataLoader(
+        dataset,  # type: ignore
+        collate_fn=default_collate_fn,
+    )
+
+    labelmap = {idx: info["name"] for idx, info in dataset.coco.cats.items()}
+    evaluator = CocoEvaluator(labelmap=labelmap)
+
+    for images, targets in tqdm(dataloader):
+        predictions = predict(detection_model, images)
+        evaluator.update(predictions, targets)
+
+    return evaluator.summarize()
+
+
+if __name__ == "__main__":
+    main()

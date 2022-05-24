@@ -1,0 +1,1 @@
+from simple_cocotools.evaluator import CocoEvaluator
