@@ -18,6 +18,7 @@ Why not just use [Pycocotools](https://github.com/cocodataset/cocoapi/tree/maste
     * **Bbox + mask:** ~100 samples/second
     * Benchmarked on COCO minival with predictions from pre-trained Faster R-CNN and Mask R-CNN models, respectively.
     * Using a Google Cloud `n1-standard-4` VM (4 vCPUs, 16 GB RAM).
+    * ** Speeds are dependent on the number of detections per image (therefore dependent on the model and thresholding). **
 
 
 ## Install
