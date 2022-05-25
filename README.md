@@ -86,3 +86,13 @@ Faster R-CNN | MobileNetV3-Large | 0.425     | 36.2    | 36.2    | -        | -
 These scores are more reflective of model performance, in my opinion.  Mask R-CNN slightly outperforms Faster R-CNN, and there is a noticeable (but not horrible) gap between ResNet50 and MobileNetV3 backbones.
 
 **Note:** PyTorch does not mention what score thresholds were used for each model benchmark. ¯\\_(ツ)_/¯
+
+
+## How It Works
+
+**TODO:** Blog post on how `simple-cocotools` works.
+
+1. Match the predictions/labels together, maximizing the IoU between pairs with the same object class. SciPy's `linear_sum_assignment` method does most of the heavy lifting here.
+2. For each IoU threshold, determine the number of "correct" predictions from the assignments above.  Pairs with IoU < threshold are incorrect. 
+3. For each image, count the number of total predictions, correct predictions, and ground truth labels for each object class and IoU threshold.  
+3. Compute AP/AR for each class from the prediction counts above.  Then compute mAP and mAR by averaging over all object classes.
