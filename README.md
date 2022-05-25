@@ -11,14 +11,9 @@ Why not just use [Pycocotools](https://github.com/cocodataset/cocoapi/tree/maste
 
 * Code is more readable and hackable.
 * Metrics are more transparent and understandable.
-* This project only depends on `numpy` and `scipy`. No `cython` extensions. 
+* Evaluation is fast.
+* Only dependencies are `numpy` and `scipy`. No `cython` extensions. 
 * Code is more modern (type annotations, linting, etc).
-* Evaluation is fast. Typically much faster than the detection model being evaluated.
-    * **Bbox:** ~350 samples/second
-    * **Bbox + mask:** ~100 samples/second
-    * Benchmarked on COCO minival with predictions from pre-trained Faster R-CNN and Mask R-CNN models, respectively.
-    * Using a Google Cloud `n1-standard-4` VM (4 vCPUs, 16 GB RAM).
-    * ** Speeds are dependent on the number of detections per image (therefore dependent on the model and thresholding). **
 
 
 ## Install
@@ -83,9 +78,14 @@ Mask R-CNN   | ResNet50          | 0.6       | 41.1    | 41.3    | 38.2     | 38
 Faster R-CNN | ResNet50          | 0.6       | 40.8    | 40.4    | -        | -
 Faster R-CNN | MobileNetV3-Large | 0.425     | 36.2    | 36.2    | -        | -
 
-These scores are more reflective of model performance, in my opinion.  Mask R-CNN slightly outperforms Faster R-CNN, and there is a noticeable (but not horrible) gap between ResNet50 and MobileNetV3 backbones.
+These scores are more reflective of model performance, in my opinion.  Mask R-CNN slightly outperforms Faster R-CNN, and there is a noticeable (but not horrible) gap between ResNet50 and MobileNetV3 backbones.  PyTorch docs don't mention what score thresholds were used for each model benchmark. ¯\\_(ツ)_/¯
 
-**Note:** PyTorch does not mention what score thresholds were used for each model benchmark. ¯\\_(ツ)_/¯
+Ignoring the time spent getting predictions from the model, evaluation is very fast.
+* **Bbox:** ~400 samples/second
+* **Bbox + mask:** ~100 samples/second
+* Using a Google Cloud `n1-standard-4` VM (4 vCPUs, 16 GB RAM).
+
+**Note:** Speeds are dependent on the number of detections per image, and therefore dependent on the model and score threshold.
 
 
 ## How It Works
