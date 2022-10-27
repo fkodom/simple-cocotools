@@ -60,7 +60,7 @@ def main(
     detection_model.eval().to(DEVICE)
 
     dataset = CocoDetection2014(split=split, transforms=transform_to_tensors)
-    dataloader = DataLoader(
+    dataloader = DataLoader(  # type: ignore
         dataset,  # type: ignore
         batch_size=batch_size,
         collate_fn=default_collate_fn,

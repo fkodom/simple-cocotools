@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        python: ["3.7", "3.8", "3.9"]
+        python: ["3.7", "3.8", "3.9", "3.10"]
 
     steps:
       - name: Checkout
@@ -32,5 +32,5 @@ jobs:
           black --check .
           isort --diff .
           flake8 .
-          pytest -s --cov --cov-report term-missing --cov-fail-under 80 tests/
           mypy .
+          pytest -s --cov --cov-report term-missing --cov-fail-under 80 tests/
