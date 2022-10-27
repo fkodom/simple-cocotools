@@ -18,7 +18,12 @@ Why not just use [Pycocotools](https://github.com/cocodataset/cocoapi/tree/maste
 
 ## Install
 
-**TODO:** Publish as a PyPI package and update instructions here.
+
+### From PyPI
+
+```bash
+pip install simple-cocotools
+```
 
 ### From Repo
 ```bash
@@ -27,9 +32,11 @@ pip install "simple-cocotools @ git+ssh://git@github.com/fkodom/simple-cocotools
 
 ### For Contributors
 ```bash
+# Clone this repository
+gh repo clone fkodom/simple-cocotools
+cd simple-cocotools
 # Install all dev dependencies (tests etc.)
-pip install "simple-cocotools[all] @ git+ssh://git@github.com/fkodom/simple-cocotools.git"
-
+pip install -e .[all]
 # Setup pre-commit hooks
 pre-commit install
 ```
@@ -37,7 +44,7 @@ pre-commit install
 
 ## Usage
 
-Expects target annotations to have the same format as model predictions. (The format used by all `torchvision` detection models.)  You probably already have code to convert annotations into this format, since it's required to train most detection models.
+Expects target annotations to have the same format as model predictions. (The format used by all `torchvision` detection models.)  You may already have code to convert annotations into this format, since it's required to train many detection models.  If not, use ['AnnotationsToDetectionFormat' from this repo](./simple_cocotools/utils/coco.py#L83) as an example for how to do that. 
 
 A minimal example:
 
