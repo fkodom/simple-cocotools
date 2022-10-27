@@ -42,20 +42,42 @@ Expects target annotations to have the same format as model predictions. (The fo
 A minimal example:
 
 ```python
-from torchvision.detection.models import fasterrcnn_resnet50_fpn
+from torchvision.detection.models import maskrcnn_resnet50_fpn
 from simple_cocotools import CocoEvaluator
 
 evaluator = CocoEvaluator()
-model = fasterrcnn_resnet50_fpn(pretrained=True).eval()
+model = maskrcnn_resnet50_fpn(pretrained=True).eval()
 
 for images, targets in data_loader:
     predictions = model(images)
     evaluator.update(predictions, targets)
 
 metrics = evaluator.summarize()
+
 ```
 
-For a more complete example, see [`scripts/faster_rcnn_example.py`](./scripts/faster_rcnn_example.py).
+`metrics` will be a dictionary with format:
+```json
+{
+    "box": {
+        "mAP": 0.40,
+        "mAR": 0.41,
+        "class_AP": {
+            "cat": 0.39,
+            "dog": 0.42,
+            ...
+        },
+        "class_AR": {
+            # Same as 'class_AP' above.
+        }
+    }
+    "mask": {
+        # Same as 'box' above.
+    }
+}
+```
+
+For a more complete example, see [`scripts/mask_rcnn_example.py`](./scripts/mask_rcnn_example.py).
 
 
 ## Benchmarks

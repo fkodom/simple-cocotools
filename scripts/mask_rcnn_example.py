@@ -44,7 +44,7 @@ def main(max_samples: Optional[int] = None) -> Dict[str, Any]:
     detection_model = maskrcnn_resnet50_fpn(pretrained=True).eval().to(DEVICE)
 
     dataset = CocoDetection2014(split="minival", transforms=transform_to_tensors)
-    dataloader = DataLoader(
+    dataloader = DataLoader(  # type: ignore
         dataset,  # type: ignore
         collate_fn=default_collate_fn,
     )
