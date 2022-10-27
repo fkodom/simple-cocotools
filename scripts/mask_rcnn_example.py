@@ -5,7 +5,7 @@ import torch
 from PIL import Image
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
-from torchvision.models.detection import fasterrcnn_resnet50_fpn
+from torchvision.models.detection import maskrcnn_resnet50_fpn
 from torchvision.transforms.functional import to_tensor
 from tqdm import tqdm
 
@@ -33,6 +33,7 @@ def predict(model: nn.Module, images: Sequence[Tensor]) -> List[Dict[str, np.nda
             "scores": pred["scores"][thresholded].cpu().numpy(),
             "labels": pred["labels"][thresholded].cpu().numpy(),
             "boxes": pred["boxes"][thresholded].cpu().numpy(),
+            "masks": pred["masks"][thresholded].cpu().numpy(),
         }
         out.append(selected)
 
@@ -40,7 +41,7 @@ def predict(model: nn.Module, images: Sequence[Tensor]) -> List[Dict[str, np.nda
 
 
 def main(max_samples: Optional[int] = None) -> Dict[str, Any]:
-    detection_model = fasterrcnn_resnet50_fpn(pretrained=True).eval().to(DEVICE)
+    detection_model = maskrcnn_resnet50_fpn(pretrained=True).eval().to(DEVICE)
 
     dataset = CocoDetection2014(split="minival", transforms=transform_to_tensors)
     dataloader = DataLoader(
