@@ -1,7 +1,5 @@
 # simple-cocotools
 
-[EXPERIMENTAL]
-
 A simple, modern alternative to `pycocotools`.
 
 
