@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 import numpy as np
 import torch
@@ -39,7 +39,7 @@ def predict(model: nn.Module, images: Sequence[Tensor]) -> List[Dict[str, np.nda
     return out
 
 
-def main() -> Dict[str, Any]:
+def main(max_samples: Optional[int] = None) -> Dict[str, Any]:
     detection_model = fasterrcnn_resnet50_fpn(pretrained=True).eval().to(DEVICE)
 
     dataset = CocoDetection2014(split="minival", transforms=transform_to_tensors)
@@ -51,7 +51,10 @@ def main() -> Dict[str, Any]:
     labelmap = {idx: info["name"] for idx, info in dataset.coco.cats.items()}
     evaluator = CocoEvaluator(labelmap=labelmap)
 
-    for images, targets in tqdm(dataloader):
+    for i, (images, targets) in enumerate(tqdm(dataloader)):
+        if max_samples and i >= max_samples:
+            break
+
         predictions = predict(detection_model, images)
         evaluator.update(predictions, targets)
 

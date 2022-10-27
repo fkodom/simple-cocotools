@@ -25,6 +25,8 @@ extras_require = {
         "isort",
         "mypy",
         "pycocotools",
+        "torch>=1.8",
+        "torchvision",
         "tqdm",
         "wget>=3.2",
         "pytest",

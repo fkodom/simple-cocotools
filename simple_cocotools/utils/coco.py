@@ -36,7 +36,6 @@ class CocoDataResource:
             path = os.path.join(tempdir, "images.zip")
             wget.download(self.url, path)
             with ZipFile(path) as zipfile:
-                breakpoint()
                 for file in tqdm(zipfile.namelist(), desc="Extracting"):
                     if file.startswith(self.prefix):
                         zipfile.extract(file, path=root)
