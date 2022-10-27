@@ -1,4 +1,4 @@
-from scripts.faster_rcnn_example import main
+from scripts.mask_rcnn_example import main
 
 
 def test_main():
