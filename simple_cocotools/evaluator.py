@@ -113,11 +113,11 @@ class CocoEvaluator:
                 for counts, updates in zip(self.box_counts[key], new_box_counts)
             ]
 
-            evaluate_masks = (
-                (_true or _pred)
-                and all(t.mask is not None for t in _true)
-                and all(p.mask is not None for p in _pred)
-            )
+            # Determine whether to evaluate mask mAP/mAR
+            pred_masks = [p.mask for p in _pred if p.mask is not None]
+            target_masks = [t.mask for t in _true if t.mask is not None]
+            evaluate_masks = pred_masks and target_masks
+
             if evaluate_masks:
                 if key not in self.mask_counts:
                     self.mask_counts[key] = [Counts() for _ in self.iou_thresholds]

@@ -32,5 +32,5 @@ jobs:
           black --check .
           isort --diff .
           flake8 .
-          mypy .
+          mypy
           pytest -s --cov --cov-report term-missing --cov-fail-under 80 tests/
