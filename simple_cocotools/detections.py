@@ -34,10 +34,8 @@ def box_iou(d1: Detection, d2: Detection) -> float:
 def mask_iou(d1: Detection, d2: Detection, threshold: float = 0.5) -> float:
     assert d1.mask is not None
     assert d2.mask is not None
-    if d1.mask.dtype != np.bool8:
-        d1.mask = d1.mask > threshold
-    if d2.mask.dtype != np.bool8:
-        d2.mask = d2.mask > threshold
+    d1.mask = d1.mask > threshold
+    d2.mask = d2.mask > threshold
 
     intersection = np.count_nonzero(d1.mask & d2.mask)
     if not intersection:
