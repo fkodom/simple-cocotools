@@ -114,11 +114,8 @@ class CocoEvaluator:
             ]
 
             # Determine whether to evaluate mask mAP/mAR
-            pred_masks = [p.mask for p in _pred if p.mask is not None]
             target_masks = [t.mask for t in _true if t.mask is not None]
-            evaluate_masks = pred_masks and target_masks
-
-            if evaluate_masks:
+            if len(target_masks) > 0:
                 if key not in self.mask_counts:
                     self.mask_counts[key] = [Counts() for _ in self.iou_thresholds]
                 new_mask_counts = get_counts_per_iou_threshold(
