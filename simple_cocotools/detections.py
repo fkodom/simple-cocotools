@@ -12,6 +12,8 @@ class Detection:
     # Box format: (left, top, right, bottom)
     box: np.ndarray
     mask: Optional[np.ndarray] = None
+    keypoints: Optional[np.ndarray] = None
+    keypoints_scores: Optional[np.ndarray] = None
     score: float = 0.0
     area: float = 0.0
 
