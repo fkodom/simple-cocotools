@@ -1,23 +1,19 @@
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    TypedDict,
-    Union,
-)
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 from simple_cocotools.detections import Detection, box_iou, mask_iou
+
+if sys.version_info >= (3, 8):
+    from typing import TypedDict  # pylint: disable=no-name-in-module
+else:
+    from typing_extensions import TypedDict
 
 
 def parse_predictions(pred: Dict[str, np.ndarray]) -> List[Detection]:
