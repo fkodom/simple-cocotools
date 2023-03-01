@@ -115,6 +115,50 @@ Ignoring the time spent getting predictions from the model, evaluation is very f
 **Note:** Speeds are dependent on the number of detections per image, and therefore dependent on the model and score threshold.
 
 
+## Keypoints Usage
+
+Keypoint mAP and mAR normally use pre-computed "sigmas" to determin the "correctness" of each keypoint prediction.  Unfortunately, those sigmas are tailored specifically for human pose (as in the COCO dataset), and not applicable to other keypoint datasets.  
+
+> **NOTE:** Sigmas are actually computed using the predictions of a specific model trained on COCO.  To make this applicable to other datasets, you would need to train a model on that dataset, and then use the sigmas from that model.  The logic is somewhat circular -- you need to train a model to get the sigmas, but you need the sigmas to compute mAP / mAR.
+>
+> There's no way around this, unless a large body of pretrained models are already available for the dataset you're using.  For most real-world problems, that is not the case.  So, the open-source mAP / mAR keypoints metrics are not generally extensible to other datasets.
+
+`simple-cocotools` does not use sigmas, and instead computes the average distance between each keypoint prediction and ground truth.  This is a much simpler approach, and is more applicable to other datasets.  It's roughly how the [sigmas for COCO were originally computed](https://cocodataset.org/#keypoints-eval).  The downside is that it's not directly comparable to the official COCO keypoints mAP / mAR.
+
+Some keypoints are more ambiguous than others.  For example, "left hip" is much more ambiguous than "left eye" -- the exact location of "left eye" should be obvious, while "left hip" is hidden by the torso and clothing.  The average distance for "left hip" will be much larger than "left eye", even if the predictions are correct. (This is how sigmas were used in the official COCO keypoints mAP / mAR.)  For that reason, keypoint distances should be interpreted with some knowledge about the specific dataset at hand.
+
+`metrics` will be a dictionary with format:
+```json
+{
+    "box": {
+        "mAP": 0.40,
+        "mAR": 0.41,
+        "class_AP": {
+            "cat": 0.39,
+            "dog": 0.42,
+            ...
+        },
+        "class_AR": {
+            # Same as 'class_AP' above.
+        }
+    }
+    "keypoints": {
+        "distance": 0.10,
+        "class_distance": {
+            "cat": {
+                "distance": 0.11,
+                "keypoint_distance": {
+                    "left_eye": 0.12,
+                    "right_eye": 0.13,
+                    ...
+                }
+            },
+            ...
+        }
+    }
+}
+```
+
 ## How It Works
 
 **TODO:** Blog post on how `simple-cocotools` works.

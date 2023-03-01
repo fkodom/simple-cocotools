@@ -25,6 +25,7 @@ extras_require = {
         "isort",
         "mypy",
         "pycocotools",
+        "sweet-pipes>=0.2.0",
         "torch>=1.8",
         "torchvision",
         "tqdm",
@@ -57,5 +58,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.8",
 )
