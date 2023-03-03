@@ -111,7 +111,7 @@ class PerKeypointMetrics:
 RunningKpMetricsType = Dict[str, PerKeypointMetrics]
 
 
-def _update_running_kp_metrics_single(
+def _update_running_kp_metrics_one_sample(
     metrics: RunningKpMetricsType,
     pred: Detection,
     true: Detection,
@@ -121,9 +121,6 @@ def _update_running_kp_metrics_single(
         return metrics
 
     for i, (pred_kp, true_kp) in enumerate(zip(pred.keypoints, true.keypoints)):
-        if pred_kp is None or true_kp is None:
-            continue
-
         visible = true_kp[2] > 0.0
         if not visible:
             continue
@@ -159,7 +156,7 @@ def update_running_kp_metrics(
     # that should be a very fast calculation, so leaving this as a future improvement.
     assignments = get_detection_assignments(pred, true, iou_fn=box_iou)
     for _pred, _true, _ in assignments:
-        metrics = _update_running_kp_metrics_single(
+        metrics = _update_running_kp_metrics_one_sample(
             metrics, _pred, _true, keypoint_labelmap=keypoint_labelmap
         )
     return metrics
@@ -323,9 +320,8 @@ def _get_class_kp_metrics(metrics: RunningKpMetricsType) -> Dict[str, Any]:
     Returns:
         A dictionary of keypoint metrics for a single class.
     """
-    keypoint_distance = {
-        key: np.mean(value.distance).item() for key, value in metrics.items()
-    }
+    # Convert to dictionary, without including the 'num_samples' property.
+    keypoint_distance = {k: v.distance for k, v in metrics.items()}
     return {
         "distance": np.mean([v for v in keypoint_distance.values()]).item(),
         "keypoint_distance": keypoint_distance,
