@@ -121,7 +121,7 @@ def _update_running_kp_metrics_one_sample(
         return metrics
 
     for i, (pred_kp, true_kp) in enumerate(zip(pred.keypoints, true.keypoints)):
-        visible = true_kp[2] > 0.0
+        visible = true_kp[2] > 1e-8
         if not visible:
             continue
 
