@@ -40,8 +40,6 @@ test = [
     "pytest==8.3.5",
     "pytest-asyncio==0.26.0",
     "pytest-cov==6.1.1",
-    # TODO: Re-enable if we need Postgres instead of SQLite for testing
-    # "pytest-postgresql==7.0.2",
     "ruff~=0.11.0",
     "wget~=3.2.0",
 ]
