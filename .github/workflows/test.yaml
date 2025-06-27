@@ -25,7 +25,7 @@ jobs:
 
       - name: Install Package
         run: |
-          uv pip install -e .[fastapi,sqlite,test]
+          uv pip install -e .[pycocotools,test]
 
       - name: Test
         run: |

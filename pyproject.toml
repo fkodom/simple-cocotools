@@ -10,8 +10,8 @@ description = "simple-cocotools"
 license = {text = "MIT"}
 dynamic = ["version", "readme"]  # NOTE: Must be in sync with [tool.setuptools.dynamic] below
 dependencies = [
-    "numpy",
-    "scipy",
+    "numpy>=2.0,<3",
+    "scipy>=1.10.0,<2.0",
 ]
 requires-python = ">=3.9"
 classifiers = ["Programming Language :: Python :: 3"]
