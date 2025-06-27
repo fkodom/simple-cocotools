@@ -44,4 +44,4 @@ def mask_iou(d1: Detection, d2: Detection, threshold: float = 0.5) -> float:
         return 0.0
 
     union = np.count_nonzero(d1.mask | d2.mask)
-    return intersection / union
+    return float(intersection / union)

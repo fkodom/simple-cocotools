@@ -114,7 +114,7 @@ class AnnotationsToDetectionFormat:
         else:
             raise ValueError(f"Unknown mode: {self.mode}")
 
-        return detections
+        return detections  # type: ignore[return-value]
 
 
 class _CocoDataset:

@@ -295,10 +295,10 @@ class CocoEvaluator:
             ).item(),
         }
 
-    def accumulate(self):
-        self.metrics = {"box": self._accumulate_detection_metrics(self.box_counts)}
+    def accumulate(self) -> dict[str, Any]:
+        self.metrics = {"box": self._accumulate_detection_metrics(self.box_counts)}  # type: ignore[arg-type]
         if self.mask_counts:
-            self.metrics["mask"] = self._accumulate_detection_metrics(self.mask_counts)
+            self.metrics["mask"] = self._accumulate_detection_metrics(self.mask_counts)  # type: ignore[arg-type]
         if self.keypoint_metrics:
             self.metrics["keypoints"] = self._accumulate_keypoint_metrics(
                 self.keypoint_metrics
