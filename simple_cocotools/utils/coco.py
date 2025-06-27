@@ -4,7 +4,7 @@ import os
 from abc import abstractproperty
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
-from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
+from typing import Any, Callable, Literal, Optional, Tuple
 from zipfile import ZipFile
 
 import numpy as np
@@ -81,7 +81,7 @@ def bbox_voc_to_coco_format(bbox: np.ndarray) -> np.ndarray:
     return np.array([x, y, x + w, y + h])
 
 
-def keypoints_to_numpy(keypoints: List[int]) -> np.ndarray:
+def keypoints_to_numpy(keypoints: list[int]) -> np.ndarray:
     out = np.array(keypoints).reshape(-1, 3)
     return out.astype(np.float32)
 
@@ -91,7 +91,7 @@ class AnnotationsToDetectionFormat:
         self.coco_api = coco_api
         self.mode = mode
 
-    def __call__(self, annotations: List[Dict[str, Any]]) -> Dict[str, np.ndarray]:
+    def __call__(self, annotations: list[dict[str, Any]]) -> dict[str, np.ndarray]:
         detections = {
             "labels": np.asarray(
                 [a["category_id"] for a in annotations], dtype=np.int32
@@ -150,7 +150,7 @@ class _CocoDataset:
         path = self.coco.loadImgs(id)[0]["file_name"]
         return Image.open(os.path.join(self.root, path)).convert("RGB")
 
-    def _load_target(self, id: int) -> List[Any]:
+    def _load_target(self, id: int) -> list[Any]:
         return self.coco.loadAnns(self.coco.getAnnIds(id))
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:

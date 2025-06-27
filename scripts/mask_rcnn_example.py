@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Optional, Sequence
 
 import numpy as np
 import torch
@@ -16,13 +16,13 @@ from simple_cocotools.utils.data import default_collate_fn
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def transform_to_tensors(image: Image.Image, targets: Dict[str, np.ndarray]):
+def transform_to_tensors(image: Image.Image, targets: dict[str, np.ndarray]):
     out_image = to_tensor(image)
     out_targets = {k: torch.as_tensor(v) for k, v in targets.items()}
     return out_image, out_targets
 
 
-def predict(model: nn.Module, images: Sequence[Tensor]) -> List[Dict[str, np.ndarray]]:
+def predict(model: nn.Module, images: Sequence[Tensor]) -> list[dict[str, np.ndarray]]:
     with torch.no_grad(), torch.autocast("cuda"):
         predictions = model([image.to(DEVICE) for image in images])
 
@@ -40,7 +40,7 @@ def predict(model: nn.Module, images: Sequence[Tensor]) -> List[Dict[str, np.nda
     return out
 
 
-def main(max_samples: Optional[int] = None) -> Dict[str, Any]:
+def main(max_samples: Optional[int] = None) -> dict[str, Any]:
     detection_model = maskrcnn_resnet50_fpn(pretrained=True).eval().to(DEVICE)
 
     dataset = CocoDetection2017(split="val", transforms=transform_to_tensors)

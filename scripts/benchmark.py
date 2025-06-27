@@ -2,7 +2,7 @@ import json
 import os
 import sys
 import time
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Optional, Sequence
 
 import numpy as np
 import torch
@@ -20,7 +20,7 @@ from simple_cocotools.utils.data import default_collate_fn
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def transform_to_tensors(image: Image.Image, targets: Dict[str, np.ndarray]):
+def transform_to_tensors(image: Image.Image, targets: dict[str, np.ndarray]):
     out_image = to_tensor(image)
     out_targets = {k: torch.as_tensor(v) for k, v in targets.items()}
     return out_image, out_targets
@@ -28,7 +28,7 @@ def transform_to_tensors(image: Image.Image, targets: Dict[str, np.ndarray]):
 
 def predict(
     model: nn.Module, images: Sequence[Tensor], score_threshold: float = 0.5
-) -> List[Dict[str, np.ndarray]]:
+) -> list[dict[str, np.ndarray]]:
     with torch.no_grad(), torch.autocast("cuda"):
         predictions = model([image.to(DEVICE) for image in images])
 
@@ -54,7 +54,7 @@ def main(
     batch_size: int = 8,
     max_batches: int = sys.maxsize,
     score_threshold: float = 0.5,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     model_fn = getattr(torchvision.models.detection, model)
     detection_model: nn.Module = model_fn(pretrained=True)
     detection_model.eval().to(DEVICE)
