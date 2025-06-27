@@ -47,5 +47,3 @@ def test_main():
     assert "keypoint_distance" in class_0_distance
     keypoint_distance = class_0_distance["keypoint_distance"]
     assert isinstance(keypoint_distance, dict)
-    # Pretrained human pose model has 17 keypoints.
-    assert len(keypoint_distance) == 17

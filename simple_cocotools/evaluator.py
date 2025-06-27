@@ -1,35 +1,41 @@
 from __future__ import annotations
 
 import json
-import sys
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypedDict,
+    Union,
+)
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 from simple_cocotools.detections import Detection, box_iou, mask_iou
 
-if sys.version_info >= (3, 8):
-    from typing import TypedDict  # pylint: disable=no-name-in-module
-else:
-    from typing_extensions import TypedDict
-
 
 def parse_predictions(pred: Dict[str, np.ndarray]) -> List[Detection]:
     detections = []
     for i, label in enumerate(pred["labels"]):
         # Ensure the bbox is a Numpy array, without copying data if possible.
-        box = np.array(pred["boxes"][i], copy=False)
+        box = np.asarray(pred["boxes"][i])
         # These values may not be present, depending on where the "predictions"
         # are coming from. (Are they from a bounding box model, which doesn't
         # have masks, or loaded directly from a dataset without confidence scores?)
-        mask = np.array(pred["masks"][i], copy=False) if "masks" in pred else None
+        mask = np.asarray(pred["masks"][i]) if "masks" in pred else None
         keypoints = (
-            np.array(pred["keypoints"][i], copy=False) if "keypoints" in pred else None
+            np.asarray(pred["keypoints"]).reshape(-1, 3)
+            if "keypoints" in pred
+            else None
         )
         keypoints_scores = (
-            np.array(pred["keypoints_scores"][i], copy=False)
+            np.asarray(pred["keypoints_scores"][i])
             if "keypoints_scores" in pred
             else None
         )
@@ -200,8 +206,8 @@ class CocoEvaluator:
         self.metrics: Dict[str, Dict] = {}
 
     def _update_one_sample(self, pred: List[Detection], true: List[Detection]):
-        pred_labels = set(p.label for p in pred)
-        true_labels = set(t.label for t in true)
+        pred_labels = {p.label for p in pred}
+        true_labels = {t.label for t in true}
         labels = pred_labels.union(true_labels)
 
         for label in labels:
@@ -221,8 +227,10 @@ class CocoEvaluator:
             ]
 
             # Determine whether to evaluate mask mAP/mAR
-            target_masks = [t.mask for t in _true if t.mask is not None]
-            if len(target_masks) > 0:
+            compute_mask_iou = all(t.mask is not None for t in _true) and all(
+                p.mask is not None for p in _pred
+            )
+            if compute_mask_iou:
                 if key not in self.mask_counts:
                     self.mask_counts[key] = [Counts() for _ in self.iou_thresholds]
                 new_mask_counts = get_counts_per_iou_threshold(
@@ -253,7 +261,7 @@ class CocoEvaluator:
 
     @staticmethod
     def _accumulate_detection_metrics(
-        metrics: Dict[Union[str, int], List[Counts]]
+        metrics: Dict[Union[str, int], List[Counts]],
     ) -> Dict[str, Any]:
         class_aps = {
             key: [(m.correct / m.predicted if m.predicted else 0.0) for m in _metrics]
@@ -275,7 +283,7 @@ class CocoEvaluator:
 
     @staticmethod
     def _accumulate_keypoint_metrics(
-        metrics: Dict[str, RunningKpMetricsType]
+        metrics: Dict[str, RunningKpMetricsType],
     ) -> Dict[str, Any]:
         class_distance = {
             key: _get_class_kp_metrics(value) for key, value in metrics.items()
@@ -323,6 +331,6 @@ def _get_class_kp_metrics(metrics: RunningKpMetricsType) -> Dict[str, Any]:
     # Convert to dictionary, without including the 'num_samples' property.
     keypoint_distance = {k: v.distance for k, v in metrics.items()}
     return {
-        "distance": np.mean([v for v in keypoint_distance.values()]).item(),
+        "distance": np.mean(list(keypoint_distance.values())).item(),
         "keypoint_distance": keypoint_distance,
     }

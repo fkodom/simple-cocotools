@@ -14,7 +14,7 @@ from torchvision.transforms.functional import to_tensor
 from tqdm import tqdm
 
 from simple_cocotools.evaluator import CocoEvaluator
-from simple_cocotools.utils.coco import CocoDetection2014
+from simple_cocotools.utils.coco import CocoDetection2017
 from simple_cocotools.utils.data import default_collate_fn
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -59,7 +59,7 @@ def main(
     detection_model: nn.Module = model_fn(pretrained=True)
     detection_model.eval().to(DEVICE)
 
-    dataset = CocoDetection2014(split=split, transforms=transform_to_tensors)
+    dataset = CocoDetection2017(split=split, transforms=transform_to_tensors)
     dataloader = DataLoader(  # type: ignore
         dataset,  # type: ignore
         batch_size=batch_size,

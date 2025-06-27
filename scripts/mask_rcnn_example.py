@@ -10,7 +10,7 @@ from torchvision.transforms.functional import to_tensor
 from tqdm import tqdm
 
 from simple_cocotools.evaluator import CocoEvaluator
-from simple_cocotools.utils.coco import CocoDetection2014
+from simple_cocotools.utils.coco import CocoDetection2017
 from simple_cocotools.utils.data import default_collate_fn
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -43,7 +43,7 @@ def predict(model: nn.Module, images: Sequence[Tensor]) -> List[Dict[str, np.nda
 def main(max_samples: Optional[int] = None) -> Dict[str, Any]:
     detection_model = maskrcnn_resnet50_fpn(pretrained=True).eval().to(DEVICE)
 
-    dataset = CocoDetection2014(split="minival", transforms=transform_to_tensors)
+    dataset = CocoDetection2017(split="val", transforms=transform_to_tensors)
     dataloader = DataLoader(  # type: ignore
         dataset,  # type: ignore
         collate_fn=default_collate_fn,
