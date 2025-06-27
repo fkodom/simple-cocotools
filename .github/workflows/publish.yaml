@@ -7,7 +7,11 @@ on:
       - created
 
 env:
-  PYTHON_VERSION: 3.9
+  PYTHON_VERSION: "3.12"
+
+permissions:
+  contents: read    # required for 'actions/checkout@v2'
+  id-token: write  # required for 'Build and Publish'
 
 jobs:
   publish:
@@ -15,23 +19,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Setup Python
-        uses: actions/setup-python@v2
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install build
-
-      - name: Build Package
+      - name: Build and Publish
         env:
-          SIMPLE_COCOTOOLS_VERSION: ${{ github.event.release.tag_name }}
-        run: python -m build
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          TIKIT_VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          uv build
+          uv publish

@@ -1,35 +1,31 @@
 from __future__ import annotations
 
 import json
-import sys
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Optional, Sequence, Tuple, TypedDict, Union
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 from simple_cocotools.detections import Detection, box_iou, mask_iou
 
-if sys.version_info >= (3, 8):
-    from typing import TypedDict  # pylint: disable=no-name-in-module
-else:
-    from typing_extensions import TypedDict
 
-
-def parse_predictions(pred: Dict[str, np.ndarray]) -> List[Detection]:
+def parse_predictions(pred: dict[str, np.ndarray]) -> list[Detection]:
     detections = []
     for i, label in enumerate(pred["labels"]):
         # Ensure the bbox is a Numpy array, without copying data if possible.
-        box = np.array(pred["boxes"][i], copy=False)
+        box = np.asarray(pred["boxes"][i])
         # These values may not be present, depending on where the "predictions"
         # are coming from. (Are they from a bounding box model, which doesn't
         # have masks, or loaded directly from a dataset without confidence scores?)
-        mask = np.array(pred["masks"][i], copy=False) if "masks" in pred else None
+        mask = np.asarray(pred["masks"][i]) if "masks" in pred else None
         keypoints = (
-            np.array(pred["keypoints"][i], copy=False) if "keypoints" in pred else None
+            np.asarray(pred["keypoints"]).reshape(-1, 3)
+            if "keypoints" in pred
+            else None
         )
         keypoints_scores = (
-            np.array(pred["keypoints_scores"][i], copy=False)
+            np.asarray(pred["keypoints_scores"][i])
             if "keypoints_scores" in pred
             else None
         )
@@ -64,7 +60,7 @@ class Counts:
 
 def get_detection_assignments(
     pred: Sequence[Detection], true: Sequence[Detection], iou_fn: Callable = box_iou
-) -> List[Tuple[Detection, Detection, float]]:
+) -> list[Tuple[Detection, Detection, float]]:
     if not (pred and true):
         return []
 
@@ -78,7 +74,7 @@ def get_counts_per_iou_threshold(
     true: Sequence[Detection],
     iou_thresholds: Sequence[float],
     iou_fn: Callable = box_iou,
-) -> List[Counts]:
+) -> list[Counts]:
     """Gets evaluation metrics for a *single* detection class across a range of
     IoU thresholds.
 
@@ -108,14 +104,14 @@ class PerKeypointMetrics:
     num_samples: int = 0
 
 
-RunningKpMetricsType = Dict[str, PerKeypointMetrics]
+RunningKpMetricsType = dict[str, PerKeypointMetrics]
 
 
 def _update_running_kp_metrics_one_sample(
     metrics: RunningKpMetricsType,
     pred: Detection,
     true: Detection,
-    keypoint_labelmap: Optional[Dict[int, str]] = None,
+    keypoint_labelmap: Optional[dict[int, str]] = None,
 ) -> RunningKpMetricsType:
     if pred.keypoints is None or true.keypoints is None:
         return metrics
@@ -149,7 +145,7 @@ def update_running_kp_metrics(
     metrics: RunningKpMetricsType,
     pred: Sequence[Detection],
     true: Sequence[Detection],
-    keypoint_labelmap: Optional[Dict[int, str]] = None,
+    keypoint_labelmap: Optional[dict[int, str]] = None,
 ) -> RunningKpMetricsType:
     # NOTE: This isn't as efficient as it could be, since we repeat the
     # 'linear_sum_assignment' calculation with box IoU.  However, for bounding boxes
@@ -183,8 +179,8 @@ class CocoEvaluator:
     def __init__(
         self,
         iou_thresholds: Optional[Sequence[float]] = None,
-        labelmap: Optional[Dict[int, str]] = None,
-        keypoint_labelmap: Optional[Dict[int, str]] = None,
+        labelmap: Optional[dict[int, str]] = None,
+        keypoint_labelmap: Optional[dict[int, str]] = None,
     ):
         self.labelmap = labelmap
         self.keypoint_labelmap = keypoint_labelmap
@@ -194,14 +190,14 @@ class CocoEvaluator:
         self.iou_thresholds = iou_thresholds
         # 'self.box_counts' is a list of counts for each class label -- one
         # for each IoU threshold.  Same for 'self.mask_counts'.
-        self.box_counts: Dict[str, List[Counts]] = {}
-        self.mask_counts: Dict[str, List[Counts]] = {}
-        self.keypoint_metrics: Dict[str, RunningKpMetricsType] = {}
-        self.metrics: Dict[str, Dict] = {}
+        self.box_counts: dict[str, list[Counts]] = {}
+        self.mask_counts: dict[str, list[Counts]] = {}
+        self.keypoint_metrics: dict[str, RunningKpMetricsType] = {}
+        self.metrics: dict[str, dict] = {}
 
-    def _update_one_sample(self, pred: List[Detection], true: List[Detection]):
-        pred_labels = set(p.label for p in pred)
-        true_labels = set(t.label for t in true)
+    def _update_one_sample(self, pred: list[Detection], true: list[Detection]):
+        pred_labels = {p.label for p in pred}
+        true_labels = {t.label for t in true}
         labels = pred_labels.union(true_labels)
 
         for label in labels:
@@ -221,8 +217,10 @@ class CocoEvaluator:
             ]
 
             # Determine whether to evaluate mask mAP/mAR
-            target_masks = [t.mask for t in _true if t.mask is not None]
-            if len(target_masks) > 0:
+            compute_mask_iou = all(t.mask is not None for t in _true) and all(
+                p.mask is not None for p in _pred
+            )
+            if compute_mask_iou:
                 if key not in self.mask_counts:
                     self.mask_counts[key] = [Counts() for _ in self.iou_thresholds]
                 new_mask_counts = get_counts_per_iou_threshold(
@@ -245,16 +243,16 @@ class CocoEvaluator:
 
     def update(
         self,
-        pred: List[Dict[str, np.ndarray]],
-        true: List[Dict[str, np.ndarray]],
+        pred: list[dict[str, np.ndarray]],
+        true: list[dict[str, np.ndarray]],
     ):
         for _pred, _true in zip(pred, true):
             self._update_one_sample(parse_predictions(_pred), parse_predictions(_true))
 
     @staticmethod
     def _accumulate_detection_metrics(
-        metrics: Dict[Union[str, int], List[Counts]]
-    ) -> Dict[str, Any]:
+        metrics: dict[Union[str, int], list[Counts]],
+    ) -> dict[str, Any]:
         class_aps = {
             key: [(m.correct / m.predicted if m.predicted else 0.0) for m in _metrics]
             for key, _metrics in metrics.items()
@@ -275,8 +273,8 @@ class CocoEvaluator:
 
     @staticmethod
     def _accumulate_keypoint_metrics(
-        metrics: Dict[str, RunningKpMetricsType]
-    ) -> Dict[str, Any]:
+        metrics: dict[str, RunningKpMetricsType],
+    ) -> dict[str, Any]:
         class_distance = {
             key: _get_class_kp_metrics(value) for key, value in metrics.items()
         }
@@ -287,10 +285,10 @@ class CocoEvaluator:
             ).item(),
         }
 
-    def accumulate(self):
-        self.metrics = {"box": self._accumulate_detection_metrics(self.box_counts)}
+    def accumulate(self) -> dict[str, Any]:
+        self.metrics = {"box": self._accumulate_detection_metrics(self.box_counts)}  # type: ignore[arg-type]
         if self.mask_counts:
-            self.metrics["mask"] = self._accumulate_detection_metrics(self.mask_counts)
+            self.metrics["mask"] = self._accumulate_detection_metrics(self.mask_counts)  # type: ignore[arg-type]
         if self.keypoint_metrics:
             self.metrics["keypoints"] = self._accumulate_keypoint_metrics(
                 self.keypoint_metrics
@@ -311,7 +309,7 @@ class CocoEvaluator:
         self.metrics = {}
 
 
-def _get_class_kp_metrics(metrics: RunningKpMetricsType) -> Dict[str, Any]:
+def _get_class_kp_metrics(metrics: RunningKpMetricsType) -> dict[str, Any]:
     """Returns a dictionary of keypoint metrics for a single class.
 
     Args:
@@ -323,6 +321,6 @@ def _get_class_kp_metrics(metrics: RunningKpMetricsType) -> Dict[str, Any]:
     # Convert to dictionary, without including the 'num_samples' property.
     keypoint_distance = {k: v.distance for k, v in metrics.items()}
     return {
-        "distance": np.mean([v for v in keypoint_distance.values()]).item(),
+        "distance": np.mean(list(keypoint_distance.values())).item(),
         "keypoint_distance": keypoint_distance,
     }

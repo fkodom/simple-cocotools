@@ -4,13 +4,13 @@ import os
 from abc import abstractproperty
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Literal, Optional, Tuple
 from zipfile import ZipFile
 
 import numpy as np
 import wget
 from PIL import Image
-from pycocotools import coco
+from pycocotools.coco import COCO
 from tqdm import tqdm
 
 
@@ -47,32 +47,33 @@ class CocoDataResource:
 class CocoImages(CocoDataResource):
     @property
     def url(self) -> str:
-        split = "val" if self.split == "minival" else self.split
-        return f"http://images.cocodataset.org/zips/{split}2014.zip"
+        return f"http://images.cocodataset.org/zips/{self.split}2017.zip"
 
     @property
     def prefix(self) -> str:
-        split = "val" if self.split == "minival" else self.split
-        return f"{split}2014/"
+        return f"{self.split}2017/"
 
 
 @dataclass
 class CocoInstances(CocoDataResource):
     @property
     def url(self) -> str:
-        if self.split == "minival":
-            return "https://dl.dropboxusercontent.com/s/o43o90bna78omob/instances_minival2014.json.zip?dl=0"
-        else:
-            return (
-                "http://images.cocodataset.org/annotations/annotations_trainval2014.zip"
-            )
+        return "http://images.cocodataset.org/annotations/annotations_trainval2017.zip"
 
     @property
     def prefix(self) -> str:
-        if self.split == "minival":
-            return "instances_minival2014.json"
-        else:
-            return f"annotations/instances_{self.split}2014.json"
+        return f"annotations/instances_{self.split}2017.json"
+
+
+@dataclass
+class CocoKeypoints(CocoDataResource):
+    @property
+    def url(self) -> str:
+        return "http://images.cocodataset.org/annotations/annotations_trainval2017.zip"
+
+    @property
+    def prefix(self) -> str:
+        return f"annotations/person_keypoints_{self.split}2017.json"
 
 
 def bbox_voc_to_coco_format(bbox: np.ndarray) -> np.ndarray:
@@ -80,26 +81,43 @@ def bbox_voc_to_coco_format(bbox: np.ndarray) -> np.ndarray:
     return np.array([x, y, x + w, y + h])
 
 
-class AnnotationsToDetectionFormat:
-    def __init__(self, coco_api: coco.COCO):
-        self.coco_api = coco_api
+def keypoints_to_numpy(keypoints: list[int]) -> np.ndarray:
+    out = np.array(keypoints).reshape(-1, 3)
+    return out.astype(np.float32)
 
-    def __call__(self, annotations: List[Dict[str, Any]]) -> Dict[str, np.ndarray]:
-        return {
-            "labels": np.array([a["category_id"] for a in annotations], dtype=np.int32),
-            "boxes": np.array(
+
+class AnnotationsToDetectionFormat:
+    def __init__(self, coco_api: COCO, mode: Literal["detection", "keypoints"]):
+        self.coco_api = coco_api
+        self.mode = mode
+
+    def __call__(self, annotations: list[dict[str, Any]]) -> dict[str, np.ndarray]:
+        detections = {
+            "labels": np.asarray(
+                [a["category_id"] for a in annotations], dtype=np.int32
+            ),
+            "boxes": np.asarray(
                 [bbox_voc_to_coco_format(a["bbox"]) for a in annotations],
                 dtype=np.float32,
             ),
-            "masks": np.array(
-                [self.coco_api.annToMask(a) for a in annotations], dtype=np.int32
-            ),
-            "area": np.array([a["area"] for a in annotations], dtype=np.float32),
-            "iscrowd": np.array([a["iscrowd"] for a in annotations], dtype=np.uint8),
+            "area": np.asarray([a["area"] for a in annotations], dtype=np.float32),
+            "iscrowd": np.asarray([a["iscrowd"] for a in annotations], dtype=np.uint8),
         }
+        if self.mode == "detection":
+            detections["masks"] = np.asarray(
+                [self.coco_api.annToMask(a) for a in annotations], dtype=np.int32
+            )
+        elif self.mode == "keypoints":
+            detections["keypoints"] = (
+                np.asarray([keypoints_to_numpy(a["keypoints"]) for a in annotations]),
+            )
+        else:
+            raise ValueError(f"Unknown mode: {self.mode}")
+
+        return detections  # type: ignore[return-value]
 
 
-class CocoDetection:
+class _CocoDataset:
     """`MS Coco Detection <https://cocodataset.org/#detection-2016>`_ Dataset.
 
     It requires the `COCO API to be installed <https://github.com/pdollar/coco/tree/master/PythonAPI>`_.
@@ -115,26 +133,36 @@ class CocoDetection:
         self,
         root: str,
         annFile: str,
+        mode: Literal["detection", "keypoints"],
         transforms: Optional[Callable] = None,
     ) -> None:
         self.root = root
-        self.transforms = transforms
-        from pycocotools.coco import COCO
-
         self.coco = COCO(annFile)
-        self.ids = list(sorted(self.coco.imgs.keys()))
+        self.mode = mode
+        self.transforms = transforms
+
+        self.ids = sorted(self.coco.imgs.keys())
+        self.target_transform = AnnotationsToDetectionFormat(
+            coco_api=self.coco, mode=self.mode
+        )
 
     def _load_image(self, id: int) -> Image.Image:
         path = self.coco.loadImgs(id)[0]["file_name"]
         return Image.open(os.path.join(self.root, path)).convert("RGB")
 
-    def _load_target(self, id: int) -> List[Any]:
+    def _load_target(self, id: int) -> list[Any]:
         return self.coco.loadAnns(self.coco.getAnnIds(id))
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         id = self.ids[index]
         image = self._load_image(id)
-        target = self._load_target(id)
+        target = self.target_transform(
+            [
+                annotation
+                for annotation in self._load_target(id)
+                if int(annotation["id"]) not in getattr(self, "skip_annotation_ids", {})
+            ]
+        )
 
         if self.transforms is not None:
             image, target = self.transforms(image, target)
@@ -145,11 +173,41 @@ class CocoDetection:
         return len(self.ids)
 
 
-class CocoDetection2014(CocoDetection):
+class CocoDetectionDataset(_CocoDataset):
+    def __init__(
+        self,
+        root: str,
+        annFile: str,
+        transforms: Optional[Callable] = None,
+    ):
+        super().__init__(
+            root=root,
+            annFile=annFile,
+            transforms=transforms,
+            mode="detection",
+        )
+
+
+class CocoKeypointsDataset(_CocoDataset):
+    def __init__(
+        self,
+        root: str,
+        annFile: str,
+        transforms: Optional[Callable] = None,
+    ):
+        super().__init__(
+            root=root,
+            annFile=annFile,
+            transforms=transforms,
+            mode="keypoints",
+        )
+
+
+class CocoDetection2017(CocoDetectionDataset):
     def __init__(
         self,
         split: str,
-        root: str = "data/coco2014",
+        root: str = "data/coco2017",
         transforms: Optional[Callable] = None,
     ):
         images = CocoImages(split=split)
@@ -171,20 +229,31 @@ class CocoDetection2014(CocoDetection):
             908400416500,
             900100463500,
         ]
-        self.target_transform = AnnotationsToDetectionFormat(coco_api=self.coco)
 
-    def __getitem__(self, index: int) -> Tuple[Any, Any]:
-        id = self.ids[index]
-        image = self._load_image(id)
-        target = self.target_transform(
-            [
-                annotation
-                for annotation in self._load_target(id)
-                if int(annotation["id"]) not in self.skip_annotation_ids
-            ]
+
+class CocoKeypoints2017(CocoKeypointsDataset):
+    def __init__(
+        self,
+        split: str,
+        root: str = "data/coco2017",
+        transforms: Optional[Callable] = None,
+    ):
+        images = CocoImages(split=split)
+        images.download(root=root)
+        images_dir = os.path.join(root, images.prefix)
+
+        anns = CocoKeypoints(split=split)
+        anns.download(root=root)
+        anns_file = os.path.join(root, anns.prefix)
+
+        super().__init__(
+            root=images_dir,
+            annFile=anns_file,
+            transforms=transforms,
         )
-
-        if self.transforms is not None:
-            image, target = self.transforms(image, target)
-
-        return image, target
+        self.skip_annotation_ids = [
+            900100193200,
+            900100259600,
+            908400416500,
+            900100463500,
+        ]
