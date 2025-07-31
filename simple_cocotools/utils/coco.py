@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from abc import abstractproperty
 from dataclasses import dataclass
@@ -12,6 +13,8 @@ import wget
 from PIL import Image
 from pycocotools.coco import COCO
 from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass  # type: ignore
@@ -104,9 +107,15 @@ class AnnotationsToDetectionFormat:
             "iscrowd": np.asarray([a["iscrowd"] for a in annotations], dtype=np.uint8),
         }
         if self.mode == "detection":
-            detections["masks"] = np.asarray(
-                [self.coco_api.annToMask(a) for a in annotations], dtype=np.int32
-            )
+            try:
+                detections["masks"] = np.asarray(
+                    [self.coco_api.annToMask(a) for a in annotations], dtype=np.int32
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to convert annotations to masks. "
+                    "This may be due to missing segmentation data in the annotations."
+                )
         elif self.mode == "keypoints":
             detections["keypoints"] = (
                 np.asarray([keypoints_to_numpy(a["keypoints"]) for a in annotations]),
