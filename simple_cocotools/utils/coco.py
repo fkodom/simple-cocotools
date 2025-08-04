@@ -4,6 +4,7 @@ import logging
 import os
 from abc import abstractproperty
 from dataclasses import dataclass
+from functools import lru_cache
 from tempfile import TemporaryDirectory
 from typing import Any, Callable, Literal, Optional, Tuple
 from zipfile import ZipFile
@@ -112,7 +113,7 @@ class AnnotationsToDetectionFormat:
                     [self.coco_api.annToMask(a) for a in annotations], dtype=np.int32
                 )
             except Exception:
-                logger.warning(
+                _warn_once(
                     "Failed to convert annotations to masks. "
                     "This may be due to missing segmentation data in the annotations."
                 )
@@ -266,3 +267,9 @@ class CocoKeypoints2017(CocoKeypointsDataset):
             908400416500,
             900100463500,
         ]
+
+
+@lru_cache(maxsize=128)
+def _warn_once(message: str) -> None:
+    """Log a warning message only once."""
+    logger.warning(message)
